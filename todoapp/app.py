@@ -10,6 +10,7 @@ app.config[
     "SQLALCHEMY_DATABASE_URI"
 ] = "postgresql://postgres:alex@localhost:5432/todoapp"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
 db = SQLAlchemy(app)
 
 
@@ -31,13 +32,23 @@ db.create_all()
 
 # controller - take input and add it to db
 @app.route("/todos/create", methods=["POST"])
-def create():
-    description = request.get_json()["description"]
-    print("description", description)
-    todo = Todo(description=description)
-    db.session.add(todo)
-    db.session.commit()
-    return LA({"description": todo.description})
+def create_todo():
+    error = False
+    body = {}
+    try:
+        description = request.get_json()["description"]
+        todo = Todo(description=description)
+        db.session.add(todo)
+        db.session.commit()
+        body["description"] = todo.description
+    except:
+        error = True
+        db.session.rollback()
+        print(sys.exc_info())
+    finally:
+        db.session.close()
+    if not error:
+        return jsonify(body)
 
 
 # controller - process the request
